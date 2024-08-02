@@ -1,5 +1,7 @@
 use std::fmt::{Debug, Formatter};
 
+use crate::languages::Language;
+
 #[derive(Clone)]
 struct TrieNode {
     has_word: bool,
@@ -23,21 +25,21 @@ impl TrieNode {
 #[derive(Debug)]
 pub struct Trie {
     root: TrieNode,
+    language: Language,
 }
 
 impl Trie {
-    pub fn new() -> Self {
-        Self { root: TrieNode::new() }
+    pub fn new(language: Language) -> Self {
+        Self { root: TrieNode::new(), language }
     }
 
-
     pub fn insert(&mut self, word: &String) {
-        let normalized_word = word.to_lowercase();
+        let normalized_word = Trie::normalize_word(word);
 
         let mut current_node = &mut self.root;
 
         for character in normalized_word.chars() {
-            let (index, is_overflowing) = (character as usize).overflowing_sub('a' as usize);
+            let (index, is_overflowing) = (character as usize).overflowing_sub(self.language.start_char as usize);
 
             if is_overflowing { continue; }
 
@@ -51,13 +53,13 @@ impl Trie {
         current_node.has_word = true;
     }
 
-    pub fn search(&self, word: String) -> bool {
+    pub fn search(&self, word: &String) -> bool {
         let mut node = &self.root;
 
-        let normalized_word = word.to_lowercase();
+        let normalized_word = Trie::normalize_word(word);
 
         for ch in normalized_word.chars() {
-            let (index, is_overflowing) = (ch as usize).overflowing_sub('a' as usize);
+            let (index, is_overflowing) = (ch as usize).overflowing_sub(self.language.start_char as usize);
 
             if is_overflowing { return node.has_word; }
 
@@ -71,5 +73,17 @@ impl Trie {
         }
 
         return node.has_word;
+    }
+
+    fn normalize_word(word: &String) -> String {
+        let lower_word = word.to_lowercase();
+
+        return lower_word.trim().to_owned();
+    }
+}
+
+impl From<Language> for Trie {
+    fn from(value: Language) -> Self {
+        Trie::new(value)
     }
 }
