@@ -1,12 +1,13 @@
+use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 
-use crate::languages::Language;
+use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Clone)]
 struct TrieNode {
     has_word: bool,
 
-    children: Vec<Option<Box<TrieNode>>>,
+    children: HashMap<String, TrieNode>,
 }
 
 impl Debug for TrieNode {
@@ -15,39 +16,34 @@ impl Debug for TrieNode {
     }
 }
 
-
 impl TrieNode {
     pub fn new() -> Self {
-        Self { has_word: false, children: vec![None; 26] }
+        Self { has_word: false, children: HashMap::new() }
     }
 }
 
 #[derive(Debug)]
 pub struct Trie {
     root: TrieNode,
-    language: Language,
 }
 
+
 impl Trie {
-    pub fn new(language: Language) -> Self {
-        Self { root: TrieNode::new(), language }
+    pub fn new() -> Self {
+        Self { root: TrieNode::new() }
     }
 
     pub fn insert(&mut self, word: &String) {
-        let normalized_word = Trie::normalize_word(word);
-
         let mut current_node = &mut self.root;
 
-        for character in normalized_word.chars() {
-            let (index, is_overflowing) = (character as usize).overflowing_sub(self.language.start_char as usize);
+        let normalized_word = Trie::normalize_word(word);
 
-            if is_overflowing { continue; }
-
-            if current_node.children[index].is_none() {
-                current_node.children[index] = Some(Box::new(TrieNode::new()));
+        for grapheme in UnicodeSegmentation::graphemes(normalized_word.as_str(), true) {
+            if !current_node.children.contains_key(grapheme) {
+                current_node.children.insert(grapheme.to_string(), TrieNode::new());
             }
 
-            current_node = current_node.children[index].as_deref_mut().unwrap();
+            current_node = current_node.children.get_mut(grapheme).unwrap();
         }
 
         current_node.has_word = true;
@@ -58,32 +54,34 @@ impl Trie {
 
         let normalized_word = Trie::normalize_word(word);
 
-        for ch in normalized_word.chars() {
-            let (index, is_overflowing) = (ch as usize).overflowing_sub(self.language.start_char as usize);
-
-            if is_overflowing { return node.has_word; }
-
-            if index >= 26 { continue; }
-
-            if let Some(child) = &node.children[index] {
-                node = child;
+        for grapheme in UnicodeSegmentation::graphemes(normalized_word.as_str(), true) {
+            if node.children.contains_key(grapheme) {
+                node = &node.children[grapheme];
             } else {
                 return false;
             }
         }
 
-        return node.has_word;
+        node.has_word
     }
 
     fn normalize_word(word: &String) -> String {
+        if word.is_empty() { return word.to_owned(); }
+
         let lower_word = word.to_lowercase();
 
-        return lower_word.trim().to_owned();
-    }
-}
+        let mut word = lower_word.trim().to_string();
 
-impl From<Language> for Trie {
-    fn from(value: Language) -> Self {
-        Trie::new(value)
+        word = Trie::remove_punctuation(&word);
+
+        // TODO: handle words like (I'll, I,ve, ...etc)
+
+        word.to_owned()
+    }
+
+    fn remove_punctuation(word: &String) -> String {
+        let new_word: String = word.chars().filter(|&c| !c.is_ascii_punctuation()).collect();
+
+        new_word
     }
 }

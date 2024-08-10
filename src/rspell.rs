@@ -3,7 +3,7 @@ use std::time::Instant;
 
 use levenshtein::levenshtein;
 
-use crate::languages::{Language, Languages};
+use crate::constants::DICTIONARIES;
 use crate::trie::Trie;
 
 pub struct Rspell {
@@ -11,20 +11,33 @@ pub struct Rspell {
     dict: Vec<String>,
 }
 
+// TODO: Handle Names
 impl Rspell {
-    pub fn new(lang: Language) -> Self {
-        let mut trie = Trie::from(lang.clone());
+    pub fn new() -> Self {
+        let mut trie = Trie::new();
 
-        let contents = fs::read_to_string(lang.dict_file)
-            .expect("Could not read the file");
+        let dict = Self::load_dictionaries();
 
-        let split = contents.split("\n").map(|w| { String::from(w) }).collect::<Vec<String>>();
-
-        for word in &split {
+        for word in &dict {
             trie.insert(word);
         }
 
-        Self { trie, dict: split }
+        Self { trie, dict }
+    }
+
+    fn load_dictionaries() -> Vec<String> {
+        let mut splits: Vec<String> = Vec::new();
+
+        for dict in DICTIONARIES {
+            let contents = fs::read_to_string(dict)
+                .expect("Could not read the file");
+
+            let mut split = contents.split("\n").map(|w| { String::from(w) }).collect::<Vec<String>>();
+
+            splits.append(&mut split);
+        }
+
+        splits
     }
 
     // TODO: find better way for suggestions
@@ -47,7 +60,7 @@ impl Rspell {
             }
         }
 
-        return suggestions;
+        suggestions
     }
 
     pub fn check_file(&self, file_path: String) {
@@ -83,18 +96,5 @@ impl Rspell {
         }
 
         println!("Number of words: {word_count}, Number of Spelling mistakes: {typos_count}");
-    }
-}
-
-impl From<Languages> for Rspell {
-    fn from(value: Languages) -> Self {
-        let lang = Language::from(value);
-
-        Rspell::new(lang)
-    }
-}
-impl From<Language> for Rspell {
-    fn from(value: Language) -> Self {
-        Rspell::new(value)
     }
 }

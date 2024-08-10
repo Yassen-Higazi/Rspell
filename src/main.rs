@@ -1,13 +1,11 @@
-use crate::languages::Languages;
-
 mod trie;
 mod rspell;
-mod languages;
+mod constants;
 
 fn main() {
     let path = "./test.txt".to_string();
 
-    let spell_checker = rspell::Rspell::from(Languages::EN);
+    let spell_checker = rspell::Rspell::new();
 
     spell_checker.check_file(path);
 

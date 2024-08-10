@@ -1,0 +1,1 @@
+pub const DICTIONARIES: [&str; 2] = ["./dictionaries/en.txt", "./dictionaries/ar.txt"];

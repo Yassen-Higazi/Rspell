@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 levenshtein = "1.0.5"
+unicode-segmentation = "1.9.0"
